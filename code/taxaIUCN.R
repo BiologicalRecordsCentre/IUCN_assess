@@ -3,7 +3,7 @@ my_model <- '2021_Francesca'
 my_model <- '2021_Ellcur'
 group <- file.path('/data-s3/occmods/Ladybirds')
 group <- file.path('/data-s3/occmods/Ephemeroptera')
-source('plotOccRmdFunctions.R')
+source('code/plotOccRmdFunctions.R')
 create_group_data <- function(group, my_model, UK_only = TRUE){
   group_file <- paste0(basename(group),'_',my_model,'_filenames.rds')
   

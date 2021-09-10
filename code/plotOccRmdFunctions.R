@@ -13,7 +13,7 @@ library(grid)
 library(png)
 library(adehabitatHR)
 library(raster)
-source('loadRData.R')
+#source('loadRData.R')
 
 tetrad_counts <- function(year, df, species){
   tmp <- df %>% filter(years == year)

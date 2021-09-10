@@ -14,7 +14,7 @@ opts_chunk$set(echo = TRUE,quietly = TRUE)
 ```
 
 ```{r readfiles, echo = FALSE, warnings = FALSE, results = 'hide', message = FALSE}
-source('taxaIUCN.R')
+source('code/taxaIUCN.R')
 UK_only <- TRUE
 my_model <- 'insert_model_name_here' # Example might be '2021_myname'
 group <- 'insert_path_to_group' # Example might be '/data-s3/occmods/Ladybirds'
