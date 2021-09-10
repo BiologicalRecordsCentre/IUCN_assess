@@ -1,0 +1,171 @@
+---
+title: "Species Classification Datasheet"
+author: "Insert_Name_Here"
+date: "`r format(Sys.time(), '%d %B, %Y')`"
+output:
+  pdf_document
+---
+
+```{r setup, include=FALSE}
+library(knitr)
+opts_chunk$set(echo = TRUE,quietly = TRUE)
+#install.packages('tinytex')
+#tinytex::install_tinytex()
+```
+
+```{r readfiles, echo = FALSE, warnings = FALSE, results = 'hide', message = FALSE}
+source('code/taxaIUCN.R')
+UK_only <- TRUE
+my_model <- 'insert_model_name_here' # Example might be '2021_myname'
+group <- 'insert_path_to_group' # Example might be '/data-s3/occmods/Ladybirds'
+
+group_data <- create_group_data(group = group,
+                                my_model = my_model,
+                                UK_only = TRUE)
+```
+
+## Introduction
+
+```{r introtext, echo = FALSE, warnings = FALSE, results = 'asis', fig.keep='all', message = FALSE}
+cat('  \n  \n')
+if(length(group_data$missing_species)==0){
+  cat(paste0('This document contains individual species assessments for all ',
+             'species within the group ', basename(group),'.'))
+} else {
+  cat(paste0('This document contains individual species assessments for most ',
+             'species within the group ', basename(group),'. However, the following ',
+             length(group_data$missing_species), ' species do not have models ',
+             'so only a limited assessment is included for these species:  \n*',
+             paste0(sort(group_data$missing_species), collapse = ', '),'*.'))
+}
+cat('  \n  \n')
+cat('The document contains a one page summary for each species in the dataset, and uses the observation data and occupancy model outputs to directly inform for the IUCN red list classification guidelines.')
+cat('  \n  \n')
+cat('Figure 1 on each page shows the locations of observations in the last 10 years, as well as a total unique tetrad count since 1970. The last 10 years has been highlighted in the tetrad plot. Below this figure the extent of occurrence and area of occupancy (from observation data, not from modelling) is displayed (in km^2^). Where one of these numbers falls below a threshold for criteria B.*1* or B.*2*, this is highlighted. Users of this document will have to examine these criteria to decide whether the species also meets the requisite number of additional criteria (severe fragmentation, continued decline or extreme fluctuations) to be classified according to criterion B.')
+cat('  \n  \n')
+cat('Figure 2 shows the modelled occupancy, with two plots shown: one scaled to the data and one scaled between 0 and 1. The last 10 years again is highlighted. These results can be used to directly inform criteria A.*1*.c and A.*2*.c, which both refer to changes in the past rather than projections into the future.')
+cat('  \n  \n')
+cat('The uncertainty in the change in occupancy in the last 10 years is captured in Figure 3, which is a density plot of the occupancy *trend* over this time period. The peak on this graph shows the most common change in occupancy from the model outputs, with the tails of the curve showing the range of uncertainty in the trend. The most likely IUCN category (modal category) and the median category for criterion A.*2*.c are quoted below, as are the proportion of models which fall within each category.')
+cat('  \n  \n')
+cat('Note that the thresholds used are criterion A.*2* rather than A.*1*., which assumes that the causes of the reduction are either not clearly reversible, or not fully understood, or not ceased. If, however, the causes of reduction are clearly reversible, understood *and* ceased, these thresholds are invalid, and criterion A.*1* should be used instead (50%, 70% and 90% reduction for VU, EN and CE thresholds respectively, instead of 30%, 50% and 80% for A.*2*.c).')
+cat('  \n  \n')
+cat('Finally, a summary table is shown, to show which thresholds may have been met for criteria A.*2*.c, B.*1* and B.*2*. This is included as a guide for users of this document, and is not meant to imply a definitive recommendation for the classification for the species.')
+```
+
+```{r createoutputs, echo = FALSE, warnings = FALSE, results = 'asis', fig.keep='all', message = FALSE, fig.width=8, fig.height=5}
+for(i in group_data$filenames){
+  cat("\n\n\\pagebreak\n")
+  cat(paste0("## ",i$species))
+  cat('  \n  \n')
+  cat("![](",i$input_results$twocolmcp,"){width=80%}")
+  cat('  \n')
+  cat(paste0('*Figure ',i$i,'.1: ',i$species,
+             ' observations from Britain.*'))
+  cat('  \n  \n')
+  area_10 <- i$input_results$areas$area_10_years
+  area_sq <- i$input_results$areas$area_sq
+  iucn_b2_class <- iucn_b1_class <- 'Least Concern'
+  iucn_b_text <-
+    list(
+      c(paste0('Observations from the last 10 years are shown on the map in Figure ',i$i,'.1. ')),
+      c('Extent of occurrence is ',
+        format(round(i$input_results$areas$area_sq,0),
+               nsmall = 0, big.mark=  ','),
+        'km^2^. '),
+      c('Area of occupancy is ',
+        format(round(i$input_results$areas$area_10_years,0),
+               nsmall = 0, big.mark = ','),
+        'km^2^.'))
+  if(area_sq < 20000){
+    iucn_b_text[[2]][c(1,3:7)] <-
+      c('Extent of occurrence of ', 'km^2^ is less than ', '20,000',
+        'km^2^ (', '*Vulnerable*', ' threshold, criterion B.*1*). ')
+    iucn_b1_class <- 'Vulnerable'
+  }
+  if(area_10 < 2000){
+    iucn_b_text[[3]][c(1,3:7)] <-
+      c('Area of occupancy of ', 'km^2^ is less than ', '2,000',
+        'km^2^ (', '*Vulnerable*', ' threshold, criterion B.*2*).')
+    iucn_b2_class <- 'Vulnerable'
+  }
+  if(area_sq < 5000){
+    iucn_b_text[[2]][c(4,6)] <- c('5,000', '*Endangered*')
+    iucn_b1_class <- 'Endangered'
+  }
+  if(area_10 < 500){
+    iucn_b_text[[3]][c(4,6)] <- c('500', '*Endangered*')
+    iucn_b2_class <- 'Endangered'
+  }
+  if(area_sq < 100){
+    iucn_b_text[[2]][c(4,6)] <- c('100', '*Critically Endangered*')
+    iucn_b1_class <- 'Critically Endangered'
+  }
+  if(area_10 < 10){
+    iucn_b_text[[3]][c(4,6)] <- c('10', '*Critically Endangered*')
+    iucn_b2_class <- 'Critically Endangered'
+  }
+  if(area_sq == 0){
+    iucn_b_text[[2]] <- c('Extent of occurrence cannot be calculated due to a lack of data. ')
+    iucn_b2_class <- 'Not Applicable'
+  }
+  cat(paste0(unlist(iucn_b_text), collapse = ''))
+  cat('  \n  \n')
+
+  if(is.na(i$output_results[1])){
+    cat('Currently, the occupancy model is not available for',
+        i$species,
+        'so no results are available to inform IUCN criterion A.*2*.c')
+    cat('  \n  \n')
+  } else {
+    cat("![](",i$output_results$occ_plot,"){width=90%}")
+    cat('  \n')
+    cat(paste0('*Figure ',i$i,'.2: Occupancy plots for ',i$species,
+               ' with y-axis scaled to data (left), and ranging from 0 to 1 (right). ',
+               '95% confidence interval shaded in grey. Last 10 years is shaded in blue.*'))
+    cat('  \n  \n')
+    cat(paste0('The occupancy trend displayed in Figure ',i$i,'.2 can be used to inform ',
+               'criterion A.*2*.c of the IUCN classification. A density plot of change in ',
+               'occupancy over the last 10 years is shown in Figure ',i$i,'.3:'))
+    cat('  \n  \n')
+    cat("![](",i$output_results$occ_densplot,"){width=80%}")
+    cat('  \n')
+    cat(paste0('*Figure ',i$i,'.3: Density plot for change in occupancy over ',
+               'last 10 years, with classification thresholds.*'))
+    cat('  \n  \n')
+    ecdf10 <- i$output_results$ecdf10
+    iucn <- data.frame(classification = c('Critically Endangered','Endangered',
+                                          'Vulnerable','Least Concern'),
+                       prob = c(ecdf10(.3), ecdf10(.5)-ecdf10(.3),
+                                ecdf10(.7)-ecdf10(.5), 1-ecdf10(.7)))
+    iucn_med <- i$output_results$median
+    iucn_med_class <- 'Least Concern'
+    if(iucn_med < .7) iucn_med_class <- 'Vulnerable'
+    if(iucn_med < .5) iucn_med_class <- 'Endangered'
+    if(iucn_med < 0.3) iucn_med_class <- 'Critically Endangered'
+    iucn_mod_class <- as.character(iucn$classification[iucn$prob==(max(iucn$prob)[1])])
+    cat(paste0('The most likely category calculated from this model is ',
+               iucn_mod_class,', ', 100*(iucn$prob[iucn$prob==(max(iucn$prob)[1])] %>% round(3)),
+               '% of models. The median change in occupancy is ',
+               (100*(i$output_results$median) - 100) %>% round(1),
+               '%, which is the classification ',
+               iucn_med_class,'.'))
+    cat('  \n  \n')
+    cat(paste0('The estimated probability of the species occupancy trend falling in the ',
+               'IUCN classifications are:  \n',
+               'Critically Endangered: ',100*(ecdf10(.3) %>% round(3)),'%, ',
+               'Endangered: ',100*((ecdf10(.5)-ecdf10(.3)) %>% round(3)),'%, ',
+               'Vulnerable: ',100*((ecdf10(.7)-ecdf10(.5)) %>% round(3)),'%, ',
+               'Least Concern: ',100*((1-ecdf10(.7)) %>% round(3)),'%.'))
+    cat('  \n  \n')
+    tabl <- paste0("
+  | A.2.c Mode            | A.2.c Median         | IUCN B.1              | IUCN B.2              |
+  |-----------------------|----------------------|-----------------------|-----------------------|
+  | ",
+    iucn_mod_class, paste0(rep(' ',21-nchar(iucn_mod_class)), collapse = ''), " | ", 
+    iucn_med_class, paste0(rep(' ', 21-nchar(iucn_med_class)), collapse = ''), " | ",
+    iucn_b1_class, paste0(rep(' ', 21-nchar(iucn_b1_class)), collapse = ''), " | ",
+    iucn_b2_class, paste0(rep(' ', 21-nchar(iucn_b2_class)), collapse = ''), " |")
+    cat(tabl)
+  }
+}
+```
